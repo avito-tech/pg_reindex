@@ -1,6 +1,54 @@
 # pg_reindex
 Reindexing PostgreSQL databases
 
+### Usage
+
+```
+-- Create new indexes with the new version in the name, without alter the index and locking on the table
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --change-index-name --print-queries
+
+-- Delete all old unused indexes from the previous script start, which was not earlier than one hour ago
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --delete-old-indexes
+```
+
+```
+-- Create new indexes with preservation of old names, but with alter the index and locking on the table
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries
+
+-- Delete all old unused indexes from the previous script start, which was not earlier than one hour ago
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --delete-old-indexes
+```
+
+```
+-- Create new indexes with the new version in the name, without alter the index and locking on the table and deleting old indexes after creating new ones
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --change-index-name --print-queries --delete-index-after-create
+```
+
+```
+-- Create new indexes with preservation of old names, but with alter the index and locking on the table and deleting old indexes after creating new ones
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create
+```
+
+```
+-- Create a new primary key on a table with a table lock
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --index base.items_pkey
+```
+
+```
+-- Create a new index with a table lock and delete the old index after creating a new one
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create --index base.items_time_idx
+```
+
+```
+-- Create new indexes for the tables specified in the schema and deleting old indexes after creating new ones
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create --schema base
+```
+
+```
+-- Print only statistics and queries, without affecting any data and without using the statistics of the bloat
+./pg_reindex.py --host=localhost --dbname=base --user=postgres --print-queries --delete-index-after-create --force --dry-run
+```
+
 ### Info
 
 Optional arguments:
@@ -65,54 +113,6 @@ pg_reindex.py
                         Postgres deadlock timeout, ms. By default 10.
   --log-level {DEBUG,INFO,ERROR}
                         A log level. By default INFO.
-```
-
-### Usage
-
-```
--- Create new indexes with the new version in the name, without alter the index and locking on the table
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --change-index-name --print-queries
-
--- Delete all old unused indexes from the previous script start, which was not earlier than one hour ago
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --delete-old-indexes
-```
-
-```
--- Create new indexes with preservation of old names, but with alter the index and locking on the table
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries
-
--- Delete all old unused indexes from the previous script start, which was not earlier than one hour ago
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --delete-old-indexes
-```
-
-```
--- Create new indexes with the new version in the name, without alter the index and locking on the table and deleting old indexes after creating new ones
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --change-index-name --print-queries --delete-index-after-create
-```
-
-```
--- Create new indexes with preservation of old names, but with alter the index and locking on the table and deleting old indexes after creating new ones
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create
-```
-
-```
--- Create a new primary key on a table with a table lock
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --index base.items_pkey
-```
-
-```
--- Create a new index with a table lock and delete the old index after creating a new one
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create --index base.items_time_idx
-```
-
-```
--- Create new indexes for the tables specified in the schema and deleting old indexes after creating new ones
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --statement-timeout 200 --deadlock-timeout 20 --print-queries --delete-index-after-create --schema base
-```
-
-```
--- Print only statistics and queries, without affecting any data and without using the statistics of the bloat
-./pg_reindex.py --host=localhost --dbname=base --user=postgres --print-queries --delete-index-after-create --force --dry-run
 ```
 
 ### Author
