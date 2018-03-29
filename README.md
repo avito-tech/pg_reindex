@@ -3,8 +3,8 @@ Reindexing PostgreSQL databases
 
 ### Usage
 
-```
--- Create new indexes with the new version in the name, without alter the index and locking on the table
+```bash
+# Create new indexes with the new version in the name, without alter the index and locking on the table
 ./pg_reindex.py --host=localhost --dbname=base --user=postgres --change-index-name --print-queries
 
 -- Delete all old unused indexes from the previous script start, which was not earlier than one hour ago
