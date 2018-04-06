@@ -70,7 +70,7 @@ pg_reindex.py
     [--deadlock-timeout DEADLOCK_TIMEOUT]
     [--log-level {DEBUG,INFO,ERROR}]
 
-  -h, --help            show this help message and exit
+  -h, --help            Show this help message and exit
   --host HOST           A database host. By default localhost.
   --port PORT           A database port. By default 5432.
   --user USER           A database user. By default current system user.
