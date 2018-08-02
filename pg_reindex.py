@@ -164,7 +164,9 @@ def advisory_lock(curs, schemaname, tablename):
 
     lock = curs.fetchone()[0]
 
-    if not lock:
+    if lock:
+        advisory_locks.append([schemaname, tablename])
+    else:
         log.info('Skipping processing: another instance is working with table "{}.{}"'.format(schemaname, tablename))
 
     return lock
@@ -174,7 +176,20 @@ def advisory_unlock_all(curs):
     """
     Removing all installed locks from all tables
     """
-    curs.execute('select pg_advisory_unlock_all()')
+    for lock in advisory_locks:
+        (schemaname, tablename) = lock
+
+        query = """
+            select 
+                pg_advisory_unlock('pg_catalog.pg_class'::regclass::integer, 
+                (quote_ident('{schemaname}') || '.' || quote_ident('{tablename}'))::regclass::integer
+            )::boolean
+        """.format(
+            schemaname=schemaname,
+            tablename=tablename
+        )
+
+        curs.execute(query)
 
 
 def get_index_data_list(curs, schemaname, tablename, indexname=None):
@@ -425,16 +440,7 @@ def get_reindex_query(schemaname, indexname, indexdef, tablespace, conname):
     if tablespace:
         reindex_query += ' TABLESPACE ' + tablespace
 
-    if not conname:
-        reindex_query = """
-            {reindex_query};
-            COMMENT ON INDEX {schemaname}.{reindex_indexname} IS 'Дата создания индекса: {now_date}';
-        """.format(
-            reindex_query=reindex_query,
-            schemaname=schemaname,
-            reindex_indexname=reindex_indexname,
-            now_date=datetime.datetime.now().strftime("%d-%m-%Y %H:%M")
-        )
+    reindex_query += ';'
 
     return [reindex_indexname, reindex_query]
 
@@ -779,6 +785,8 @@ if __name__ == '__main__':
     free_space_total_plan = 0
 
     log.info('Process started, host: {}, dbname: {}'.format(args.host, args.dbname))
+
+    advisory_locks = list()
 
     try:
         if len(args.index) > 0:
