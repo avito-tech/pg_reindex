@@ -384,12 +384,10 @@ def get_index_bloat_stats(curs, pgstattuple, pgstattuple_ver, schemaname, indexn
     return curs.fetchone()
 
 
-def get_reindex_query(schemaname, indexname, indexdef, tablespace, conname):
+def get_reindex_query(indexname, indexdef, tablespace, conname):
     """
     Getting a request to re-create an index
     """
-    reindex_indexname = None
-
     if args.change_index_name and not conname:
         tmp_name = indexname
 
@@ -445,11 +443,16 @@ def get_reindex_query(schemaname, indexname, indexdef, tablespace, conname):
     return [reindex_indexname, reindex_query]
 
 
-def drop_temp_index(curs, reindex_indexname):
+def drop_temp_index(curs, schemaname, reindex_indexname):
     """
     Delete a new index created to replace the old one
     """
-    drop_query = 'DROP INDEX CONCURRENTLY ' + reindex_indexname
+    drop_query = """
+        DROP INDEX CONCURRENTLY {schemaname}.{reindex_indexname};
+    """.format(
+        schemaname=schemaname,
+        reindex_indexname=reindex_indexname
+    )
 
     try:
         curs.execute(drop_query)
@@ -574,7 +577,7 @@ def drop_old_indexes(curs):
             curs.execute("""drop table if exists zdrop_index_later""")
 
 
-def index_is_valid(curs, reindex_indexname):
+def index_is_valid(curs, schemaname, reindex_indexname):
     """
     Validating an index created with CONCURRENTLY
     """
@@ -584,21 +587,26 @@ def index_is_valid(curs, reindex_indexname):
         from pg_class c
         join pg_index i on
             i.indexrelid = c.oid
+        join pg_namespace ns on
+            c.relnamespace = ns.oid
         where
-            c.relkind = 'i' and
-            c.relname = '{reindex_indexname}'
+            ns.nspname = '{schemaname}' and
+            c.relname = '{reindex_indexname}' and
+            c.relkind = 'i'
     """.format(
+        schemaname=schemaname,
         reindex_indexname=reindex_indexname
     )
 
+    isvalid = False
     try:
         curs.execute(query)
         isvalid = curs.fetchone()[0]
-        if not isvalid:
-            log.info('Index "{}" did not pass the validity check'.format(indexname))
     except Exception as e:
-        log.error(format_message(mesaage='Could not check the validity of the index "{}", {}'.format(indexname, e), color='red'))
-        isvalid = False
+        log.error(format_message(message='Could not check the validity of the index "{}", {}'.format(indexname, e), color='red'))
+
+    if not isvalid:
+        log.info('Index "{}" did not pass the validity check'.format(indexname))
 
     return isvalid
 
@@ -781,10 +789,13 @@ if __name__ == '__main__':
         drop_old_indexes(curs)
         sys.exit(0)
 
+    log.info('Process started, host: {}, dbname: {}'.format(args.host, args.dbname))
+
     free_space_total = 0
     free_space_total_plan = 0
 
-    log.info('Process started, host: {}, dbname: {}'.format(args.host, args.dbname))
+    pgstattuple = None
+    pgstattuple_ver = None
 
     advisory_locks = list()
 
@@ -871,7 +882,7 @@ if __name__ == '__main__':
 
                         log.info('Bloat stats: "%s.%s" - free_percent %d%%, free_space %s' % (schemaname, indexname, free_percent, size_pretty(curs, free_space)))
 
-                    (reindex_indexname, reindex_query) = get_reindex_query(schemaname, indexname, indexdef, tablespace, conname)
+                    (reindex_indexname, reindex_query) = get_reindex_query(indexname, indexdef, tablespace, conname)
 
                     (alter_query, drop_query) = get_alter_drop_index_query(schemaname, tablename, indexname, reindex_indexname, conname, contypedef, is_deferrable, is_deferred)
 
@@ -922,11 +933,11 @@ if __name__ == '__main__':
                                 curs.execute(query)
                     except psycopg2.Error as e:
                         log.error(format_message(message='{}, {}'.format(e.pgcode, e.pgerror), color='red'))
-                        drop_temp_index(curs, reindex_indexname)
+                        drop_temp_index(curs, schemaname, reindex_indexname)
                         continue
 
-                    if not index_is_valid(curs, reindex_indexname):
-                        drop_temp_index(curs, reindex_indexname)
+                    if not index_is_valid(curs, schemaname, reindex_indexname):
+                        drop_temp_index(curs, schemaname, reindex_indexname)
                         continue
 
                     if is_functional == 1:
@@ -936,7 +947,7 @@ if __name__ == '__main__':
                             log.info('{} - done'.format(query))
                         except psycopg2.Error as e:
                             log.error(format_message(message='{}, {}'.format(e.pgcode, e.pgerror), color='red'))
-                            drop_temp_index(curs, reindex_indexname)
+                            drop_temp_index(curs, schemaname, reindex_indexname)
                             continue
 
                     locked_alter_attempt = 0
@@ -977,13 +988,13 @@ if __name__ == '__main__':
 
                     if args.change_index_name and not conname:
                         message = 'Reindex: %s.%s, initial size %s pages (%s), has been reduced by %d%% (%s), duration %d seconds. New index name: %s' % (
-                            schemaname, indexname, size_pretty(curs, size), page_count, 
+                            schemaname, indexname, size_pretty(curs, size), page_count,
                             free_percent, size_pretty(curs, free_space), reindex_time, reindex_indexname
                         )
                         log.info(format_message(message=message, color='green'))
                     else:
                         message = 'Reindex: %s.%s, initial size %s pages (%s), has been reduced by %d%% (%s), duration %d seconds, attempts %d' % (
-                            schemaname, indexname, size_pretty(curs, size), page_count, 
+                            schemaname, indexname, size_pretty(curs, size), page_count,
                             free_percent, size_pretty(curs, free_space), reindex_time, locked_alter_attempt
                         )
                         log.info(format_message(message=message, color='green'))
