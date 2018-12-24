@@ -819,7 +819,7 @@ if __name__ == '__main__':
                     curs.execute('create extension pgstattuple')
                     (pgstattuple, pgstattuple_ver) = get_pgstattuple_schema_name(curs)
                 if pgstattuple is None:
-                    log.error(format_message(message='Skip handling database {}: pgstattuple extention is not found'.format(args.dbname), color='red'))
+                    log.error(format_message(message='Skip handling database {}: pgstattuple extension is not found'.format(args.dbname), color='red'))
                     sys.exit(0)
 
         if len(args.table) > 0:
