@@ -7,11 +7,13 @@ import sys
 import time
 import argparse
 import getpass
-import psycopg2
 import random
 import datetime
 import readline
 import logging
+
+import psycopg2
+from psycopg2.extensions import quote_ident
 
 
 def format_message(message, color=None):
@@ -99,7 +101,7 @@ def get_database_tables(curs, schema=None, table=None, exclude_schema=None, excl
             select 
                 schemaname, 
                 tablename,
-                pg_indexes_size(schemaname||'.'||tablename) as indexes_size
+                pg_indexes_size(quote_ident(schemaname)||'.'||quote_ident(tablename)) as indexes_size
             from pg_catalog.pg_tables
             where
                 schemaname !~ 'pg_(temp|toast|catalog).*' and
@@ -450,8 +452,8 @@ def drop_temp_index(curs, schemaname, reindex_indexname):
     drop_query = """
         DROP INDEX CONCURRENTLY {schemaname}.{reindex_indexname};
     """.format(
-        schemaname=schemaname,
-        reindex_indexname=reindex_indexname
+        schemaname=quote_ident(schemaname, curs),
+        reindex_indexname=quote_ident(reindex_indexname, curs)
     )
 
     try:
@@ -526,7 +528,7 @@ def drop_old_indexes(curs):
     """
     query = """
         select
-            format('DROP INDEX CONCURRENTLY %s.%s', n.nspname, c.relname) as drop_query
+            format('DROP INDEX CONCURRENTLY %s.%s', quote_ident(n.nspname), quote_ident(c.relname)) as drop_query
         from pg_class c
         join pg_catalog.pg_namespace n on 
             n.oid = c.relnamespace
@@ -884,7 +886,12 @@ if __name__ == '__main__':
 
                     (reindex_indexname, reindex_query) = get_reindex_query(indexname, indexdef, tablespace, conname)
 
-                    (alter_query, drop_query) = get_alter_drop_index_query(schemaname, tablename, indexname, reindex_indexname, conname, contypedef, is_deferrable, is_deferred)
+                    (alter_query, drop_query) = get_alter_drop_index_query(quote_ident(schemaname, curs),
+                                                                           quote_ident(tablename, curs),
+                                                                           quote_ident(indexname, curs),
+                                                                           quote_ident(reindex_indexname, curs),
+                                                                           quote_ident(conname, curs) if conname else conname,
+                                                                           contypedef, is_deferrable, is_deferred)
 
                     if args.print_queries:
 
