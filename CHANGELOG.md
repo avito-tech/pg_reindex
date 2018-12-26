@@ -2,4 +2,4 @@
 
 ### Fixes
 
-Fixed processing mixed case relation names by using quote_ident where applicable (Phil Krylov)
+* Fixed processing mixed case relation names by using quote_ident where applicable (Phil Krylov)
