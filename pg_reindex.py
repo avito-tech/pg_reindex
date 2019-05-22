@@ -688,6 +688,44 @@ def get_alter_drop_index_query(schemaname, tablename, indexname, reindex_indexna
     return [alter_query, drop_query]
 
 
+def print_queries(reindex_query=None, alter_query=None, drop_query=None):
+    """
+    Displays requests for reindexing, etc.
+    """
+    if reindex_query is not None or alter_query is not None or drop_query is not None:
+        formatter = logging.Formatter(fmt='%(message)s')
+        handler.setFormatter(formatter)
+        screen_handler.setFormatter(formatter)
+        log.addHandler(handler)
+        log.addHandler(screen_handler)
+
+        log.info('')
+
+        for sql in [reindex_query, alter_query, drop_query]:
+            tab = False
+            if sql:
+                queries = sql.split(';')
+                for query in queries:
+                    query = query.strip()
+                    if query:
+                        if not args.delete_index_after_create and query.count('DROP ') > 0:
+                            continue
+                        if (query + ';').count('END;') > 0:
+                            tab = False
+                        query = '   ' + query + ';' if tab else query + ';'
+                        log.info(query)
+                        if query.count('BEGIN;') > 0:
+                            tab = True
+
+        log.info('')
+
+        formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(formatter)
+        screen_handler.setFormatter(formatter)
+        log.addHandler(handler)
+        log.addHandler(screen_handler)
+
+
 def size_pretty(curs, size):
     """
     Convert size to readable view
@@ -894,37 +932,7 @@ if __name__ == '__main__':
                                                                            contypedef, is_deferrable, is_deferred)
 
                     if args.print_queries:
-
-                        formatter = logging.Formatter(fmt='%(message)s')
-                        handler.setFormatter(formatter)
-                        screen_handler.setFormatter(formatter)
-                        log.addHandler(handler)
-                        log.addHandler(screen_handler)
-
-                        log.info('')
-
-                        for sql in [reindex_query, alter_query, drop_query]:
-                            tab = False
-                            if sql:
-                                queries = sql.split(';')
-                                for query in queries:
-                                    query = query.strip()
-                                    if query:
-                                        if not args.delete_index_after_create and query.count('DROP ') > 0:
-                                            continue
-                                        if (query + ';').count('END;') > 0:
-                                            tab = False
-                                        query = '   ' + query + ';' if tab else query + ';'
-                                        log.info(query)
-                                        if query.count('BEGIN;') > 0:
-                                            tab = True
-                        log.info('')
-
-                        formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-                        handler.setFormatter(formatter)
-                        screen_handler.setFormatter(formatter)
-                        log.addHandler(handler)
-                        log.addHandler(screen_handler)
+                        print_queries(reindex_query, alter_query, drop_query)
 
                     if args.dry_run:
                         continue
@@ -978,8 +986,8 @@ if __name__ == '__main__':
                                     log.error(format_message(message='{}, {}'.format(e.pgcode, e.pgerror), color='red'))
 
                         if locked_alter_attempt >= args.reindex_retry_max_count:
-                            log.info('Reindex: "{}.{}", unable lock'.format(schemaname, indexname))
-                            log.info('Reindexing is up to you, queries: {}'.format(alter_query))
+                            log.info('Reindex: "{}.{}", unable lock, reindexing is up to you, queries:'.format(schemaname, indexname))
+                            print_queries(alter_query=alter_query, drop_query=drop_query)
                             continue
 
                     reindex_time = (datetime.datetime.now() - reindex_time).total_seconds()
