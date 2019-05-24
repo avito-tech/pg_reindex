@@ -661,12 +661,7 @@ def get_alter_drop_index_query(schemaname, tablename, indexname, reindex_indexna
                 BEGIN;
                     SET LOCAL statement_timeout TO {statement_timeout};
                     SET LOCAL deadlock_timeout TO {deadlock_timeout};
-                    COMMENT ON INDEX {schemaname}.{indexname} IS '{indexname}';
                     ALTER INDEX {schemaname}.{indexname} RENAME TO {tmp_index_name};
-                END;
-                BEGIN;
-                    SET LOCAL statement_timeout TO {statement_timeout};
-                    SET LOCAL deadlock_timeout TO {deadlock_timeout};
                     ALTER INDEX {schemaname}.{reindex_indexname} RENAME TO {indexname};
                 END;
             """.format(
