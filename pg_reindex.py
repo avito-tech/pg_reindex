@@ -703,7 +703,7 @@ def print_queries(reindex_query=None, alter_query=None, drop_query=None):
                 for query in queries:
                     query = query.strip()
                     if query:
-                        if not args.delete_index_after_create and query.count('DROP ') > 0:
+                        if not args.delete_index_after_create and query.count('DROP INDEX') > 0:
                             continue
                         if (query + ';').count('END;') > 0:
                             tab = False
