@@ -1,5 +1,5 @@
 # PG Reindex
-Reindexing PostgreSQL databases
+Console utility for rebuilding indexes and primary keys for PostgreSQL in automatic mode with analysis of index bloating and without table locking
 
 ### Usage
 
