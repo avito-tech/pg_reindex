@@ -1,3 +1,9 @@
+# 1.0.6 (May 29, 2019)
+
+### Fixes
+
+* Fixed output of print requests for primary keys
+
 # 1.0.5 (May 24, 2019)
 
 ### Changes
